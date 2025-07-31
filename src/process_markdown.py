@@ -3,6 +3,7 @@ from blocknode import BlockType, block_to_block_type
 from parentnode import ParentNode
 from leafnode import LeafNode
 import re
+import os
 
 def split_nodes_delimiter(old_nodes, delimiter, text_type):
     """Splits a list of nodes into sublists based on a delimiter."""
@@ -143,7 +144,7 @@ def markdown_to_html_node(markdown):
                 block_nodes.append(paragraph_node)
             case BlockType.HEADING:
                 header_level = len(block.strip().split(" ")[0])
-                header_nodes = text_to_children(block)
+                header_nodes = text_to_children(block.lstrip('#').strip())
                 header_node = ParentNode(f"h{header_level}", header_nodes)
                 block_nodes.append(header_node)
             case BlockType.CODE:
@@ -155,7 +156,9 @@ def markdown_to_html_node(markdown):
                 code_node = ParentNode("pre", [ParentNode("code", [LeafNode(None, code_content)])])
                 block_nodes.append(code_node)
             case BlockType.QUOTE:
-                quote_nodes = text_to_children(block)
+                # Remove '>' from the beginning of every line
+                quote_text = '\n'.join(line.lstrip('>').strip() for line in block.split('\n'))
+                quote_nodes = text_to_children(quote_text)
                 quote_node = ParentNode("blockquote", quote_nodes)
                 block_nodes.append(quote_node)
             case BlockType.ORDERED_LIST:
@@ -180,3 +183,51 @@ def markdown_to_html_node(markdown):
                 pass  # Handle unknown block type
     html_node = ParentNode("div", block_nodes)
     return html_node
+
+def extract_title(markdown):
+    """Extracts the title from markdown text."""
+    lines = markdown.split('\n')
+    for line in lines:
+        if line.startswith('# '):
+            return line[2:].strip()  # Return the title without the '# '
+    raise ValueError("No title found in markdown text")  # No title found
+
+def generate_page(from_path, template_path, dest_path):
+    print(f"Generating page from {from_path} to {dest_path} using {template_path}")
+    """Generates a page from markdown text."""
+    with open(from_path, 'r') as f:
+        markdown_text = f.read()
+    
+    title = extract_title(markdown_text)
+    html_node = markdown_to_html_node(markdown_text)
+
+    # Load template and replace placeholders
+    with open(template_path, 'r') as f:
+        template = f.read()
+    
+    html_content = template.replace('{{ Title }}', title).replace('{{ Content }}', html_node.to_html())
+
+    # Ensure destination directory exists
+    dest_dir = os.path.dirname(dest_path)
+    if dest_dir and not os.path.exists(dest_dir):
+        os.makedirs(dest_dir, exist_ok=True)
+
+    # Write to destination path
+    with open(dest_path, 'w') as f:
+        f.write(html_content)
+
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+    """Generates pages recursively from markdown files in a directory."""
+    if not os.path.exists(dest_dir_path):
+        os.makedirs(dest_dir_path)
+
+    for item in os.listdir(dir_path_content):
+        item_path = os.path.join(dir_path_content, item)
+        if os.path.isdir(item_path):
+            # Recursively generate pages in subdirectories
+            generate_pages_recursive(item_path, template_path, os.path.join(dest_dir_path, item))
+        elif item.endswith('.md'):
+            # Generate page for markdown file
+            dest_file_name = item.replace('.md', '.html')
+            dest_file_path = os.path.join(dest_dir_path, dest_file_name)
+            generate_page(item_path, template_path, dest_file_path)
