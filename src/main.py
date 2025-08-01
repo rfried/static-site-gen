@@ -17,12 +17,13 @@ def recursive_copy(source_folder, destination_folder):
 
 def main():
     basepath = "/"
+    dest_folder = "docs"
     if len(sys.argv) > 1:
         basepath = sys.argv[1]
-    if os.path.exists('public'):
-        shutil.rmtree('public')
-    recursive_copy('static', 'public')
-    generate_pages_recursive("content", "template.html", "public", basepath)
+    if os.path.exists(dest_folder):
+        shutil.rmtree(dest_folder)
+    recursive_copy('static', dest_folder)
+    generate_pages_recursive("content", "template.html", dest_folder, basepath)
 
 
 if __name__ == "__main__":
