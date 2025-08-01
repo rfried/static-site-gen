@@ -1,6 +1,7 @@
 from process_markdown import generate_pages_recursive
 import shutil
 import os
+import sys
 
 def recursive_copy(source_folder, destination_folder):
     if not os.path.exists(destination_folder):
@@ -15,10 +16,13 @@ def recursive_copy(source_folder, destination_folder):
             shutil.copy2(source_path, destination_path)
 
 def main():
+    basepath = "/"
+    if len(sys.argv) > 1:
+        basepath = sys.argv[1]
     if os.path.exists('public'):
         shutil.rmtree('public')
     recursive_copy('static', 'public')
-    generate_pages_recursive("content", "template.html", "public")
+    generate_pages_recursive("content", "template.html", "public", basepath)
 
 
 if __name__ == "__main__":

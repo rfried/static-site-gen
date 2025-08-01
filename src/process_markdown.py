@@ -192,7 +192,7 @@ def extract_title(markdown):
             return line[2:].strip()  # Return the title without the '# '
     raise ValueError("No title found in markdown text")  # No title found
 
-def generate_page(from_path, template_path, dest_path):
+def generate_page(from_path, template_path, dest_path, basepath="/"):
     print(f"Generating page from {from_path} to {dest_path} using {template_path}")
     """Generates a page from markdown text."""
     with open(from_path, 'r') as f:
@@ -206,6 +206,9 @@ def generate_page(from_path, template_path, dest_path):
         template = f.read()
     
     html_content = template.replace('{{ Title }}', title).replace('{{ Content }}', html_node.to_html())
+    # Replace basepath in links
+    html_content = html_content.replace('href="/', f'href="{basepath}') 
+    html_content = html_content.replace('src="/', f'src="{basepath}')  # Handle image sources as well
 
     # Ensure destination directory exists
     dest_dir = os.path.dirname(dest_path)
@@ -216,7 +219,7 @@ def generate_page(from_path, template_path, dest_path):
     with open(dest_path, 'w') as f:
         f.write(html_content)
 
-def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path, basepath="/"):
     """Generates pages recursively from markdown files in a directory."""
     if not os.path.exists(dest_dir_path):
         os.makedirs(dest_dir_path)
@@ -225,9 +228,9 @@ def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
         item_path = os.path.join(dir_path_content, item)
         if os.path.isdir(item_path):
             # Recursively generate pages in subdirectories
-            generate_pages_recursive(item_path, template_path, os.path.join(dest_dir_path, item))
+            generate_pages_recursive(item_path, template_path, os.path.join(dest_dir_path, item), basepath)
         elif item.endswith('.md'):
             # Generate page for markdown file
             dest_file_name = item.replace('.md', '.html')
             dest_file_path = os.path.join(dest_dir_path, dest_file_name)
-            generate_page(item_path, template_path, dest_file_path)
+            generate_page(item_path, template_path, dest_file_path, basepath)
